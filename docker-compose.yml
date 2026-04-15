@@ -3,18 +3,11 @@ services:
     image: stalwartlabs/stalwart:latest
     container_name: stalwart
     restart: unless-stopped
-    ports:
-      - "443:443"     # HTTPS
-      - "8080:8080"   # Web Admin Interface
-      - "25:25"       # SMTP (eingehend, MTA-to-MTA)
-      - "587:587"     # Submission (Clients mit STARTTLS)
-      - "465:465"     # SMTPS (implizites TLS)
+    network_mode: host
     volumes:
       - stalwart-data:/opt/stalwart
     environment:
       - TZ=${TIMEZONE:-Europe/Berlin}
-    networks:
-      - smtp-relay-net
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 30s
@@ -25,7 +18,3 @@ services:
 volumes:
   stalwart-data:
     driver: local
-
-networks:
-  smtp-relay-net:
-    driver: bridge
