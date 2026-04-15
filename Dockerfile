@@ -2,7 +2,7 @@
 # Dockerfile – Stalwart SMTP Relay
 # Basis: offizielles Stalwart Image
 # ──────────────────────────────────────────────────────
-FROM stalwartlabs/mail-server:latest
+FROM ghcr.io/stalwartlabs/mail-server:latest
 
 # Metadaten
 LABEL maintainer="dein-name@example.com"

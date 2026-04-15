@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   stalwart:
-    image: stalwartlabs/mail-server:latest
+    image: ghcr.io/stalwartlabs/mail-server:latest
     container_name: stalwart-smtp-relay
     restart: unless-stopped
     hostname: ${MAIL_HOSTNAME:-mail.example.com}
