@@ -1,0 +1,15 @@
+# Umgebungsvariablen (nie einchecken!)
+.env
+
+# Laufzeitdaten des Servers
+data/
+config/tls/
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
+*.swo

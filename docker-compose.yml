@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  stalwart:
+    image: stalwartlabs/mail-server:latest
+    container_name: stalwart-smtp-relay
+    restart: unless-stopped
+    hostname: ${MAIL_HOSTNAME:-mail.example.com}
+    ports:
+      - "25:25"       # SMTP (eingehend, MTA-to-MTA)
+      - "587:587"     # Submission (Clients mit AUTH)
+      - "465:465"     # SMTPS (TLS)
+      - "8080:8080"   # Web Admin Interface
+    volumes:
+      - ./data:/opt/stalwart-mail
+      - ./config:/opt/stalwart-mail/etc
+    environment:
+      - TZ=${TIMEZONE:-Europe/Berlin}
+    networks:
+      - smtp-relay-net
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "587"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+networks:
+  smtp-relay-net:
+    driver: bridge
