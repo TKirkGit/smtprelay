@@ -1,30 +1,20 @@
 # ──────────────────────────────────────────────────────
 # Dockerfile – Stalwart SMTP Relay
 # Basis: offizielles Stalwart Image
+# Hinweis: Nur nötig wenn eigene Anpassungen ins Image sollen.
+#          Für den Normalfall reicht docker-compose.yml allein.
 # ──────────────────────────────────────────────────────
-FROM ghcr.io/stalwartlabs/mail-server:latest
+FROM stalwartlabs/stalwart:latest
 
 # Metadaten
 LABEL maintainer="dein-name@example.com"
 LABEL description="Stalwart SMTP Relay Server"
 
-# Arbeitsverzeichnis
-WORKDIR /opt/stalwart-mail
-
-# Konfiguration ins Image kopieren
-# (Alternative: per Volume in docker-compose.yml mounten – bevorzugt!)
-COPY ./config/config.toml /opt/stalwart-mail/etc/config.toml
+# Arbeitsverzeichnis (offizieller Pfad laut Stalwart Doku)
+WORKDIR /opt/stalwart
 
 # Datenpfade anlegen
-RUN mkdir -p \
-    /opt/stalwart-mail/data \
-    /opt/stalwart-mail/etc/tls \
-    /opt/stalwart-mail/queue \
-    /opt/stalwart-mail/logs \
-    && chown -R stalwart:stalwart /opt/stalwart-mail || true
+RUN mkdir -p /opt/stalwart/etc /opt/stalwart/data /opt/stalwart/logs
 
 # Ports freigeben
-EXPOSE 25 587 465 8080
-
-# Startbefehl
-CMD ["stalwart-mail", "--config", "/opt/stalwart-mail/etc/config.toml"]
+EXPOSE 443 8080 25 587 465

@@ -1,29 +1,30 @@
-version: "3.9"
-
 services:
   stalwart:
-    image: ghcr.io/stalwartlabs/mail-server:latest
-    container_name: stalwart-smtp-relay
+    image: stalwartlabs/stalwart:latest
+    container_name: stalwart
     restart: unless-stopped
-    hostname: ${MAIL_HOSTNAME:-mail.example.com}
     ports:
-      - "25:25"       # SMTP (eingehend, MTA-to-MTA)
-      - "587:587"     # Submission (Clients mit AUTH)
-      - "465:465"     # SMTPS (TLS)
+      - "443:443"     # HTTPS
       - "8080:8080"   # Web Admin Interface
+      - "25:25"       # SMTP (eingehend, MTA-to-MTA)
+      - "587:587"     # Submission (Clients mit STARTTLS)
+      - "465:465"     # SMTPS (implizites TLS)
     volumes:
-      - ./data:/opt/stalwart-mail
-      - ./config:/opt/stalwart-mail/etc
+      - stalwart-data:/opt/stalwart
     environment:
       - TZ=${TIMEZONE:-Europe/Berlin}
     networks:
       - smtp-relay-net
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "587"]
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 20s
+      start_period: 30s
+
+volumes:
+  stalwart-data:
+    driver: local
 
 networks:
   smtp-relay-net:

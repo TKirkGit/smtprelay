@@ -1,6 +1,7 @@
-# SMTP Relay – Stalwart MTA via Docker
+# SMTP Relay – Stalwart via Docker
 
-Vollständige Einrichtung eines SMTP-Relay-Servers mit [Stalwart Mail Server](https://stalw.art) auf einem Linux-Server via Docker.
+SMTP-Relay-Server mit [Stalwart Mail Server](https://stalw.art) auf Linux via Docker.
+Konfiguration erfolgt über das **Web-Interface** – nicht über manuelle Config-Dateien.
 
 ---
 
@@ -9,151 +10,114 @@ Vollständige Einrichtung eines SMTP-Relay-Servers mit [Stalwart Mail Server](ht
 ```
 smtprelay/
 ├── docker-compose.yml       # Container-Orchestrierung
-├── Dockerfile               # Eigenes Image (optional)
+├── Dockerfile               # Eigenes Image (optional, nur bei Anpassungen)
 ├── .env.example             # Vorlage für Umgebungsvariablen
-├── .env                     # Lokale Konfiguration (nicht einchecken!)
 ├── .gitignore
-├── config/
-│   ├── config.toml          # Stalwart Hauptkonfiguration
-│   └── tls/                 # TLS-Zertifikate (nicht einchecken!)
-│       ├── tls.crt
-│       └── tls.key
-├── data/                    # Persistente Serverdaten (nicht einchecken!)
-│   ├── queue/               # Mail-Queue
-│   └── logs/
-└── scripts/
-    └── setup.sh             # Einmaliges Setup-Skript für Linux
+├── scripts/
+│   └── setup.sh             # Einmaliges Setup-Skript für Linux
+└── README.md
 ```
+
+> **Stalwart erzeugt beim ersten Start automatisch:**
+> - `/opt/stalwart/etc/config.toml`
+> - Admin-Account + Passwort (sichtbar in `docker logs stalwart`)
+> - RocksDB Datenbank unter `/opt/stalwart/data/`
 
 ---
 
 ## Schritt-für-Schritt: Linux-Server einrichten
 
-### 1. Docker installieren (Debian/Ubuntu)
+### 1. Docker installieren
 
 ```bash
-# Schnellinstallation via offiziellem Skript
 curl -fsSL https://get.docker.com | sudo bash
-
-# Docker ohne sudo nutzen (optional, danach ausloggen + einloggen)
 sudo usermod -aG docker $USER
-
-# Versions-Check
-docker --version
-docker compose version
+# Ausloggen + Einloggen damit die Gruppe greift
 ```
 
 ### 2. Projekt vom GitHub holen
 
 ```bash
-# Repository klonen
 git clone https://github.com/DEIN-USER/smtprelay.git
 cd smtprelay
-
-# ODER: Wenn Repo schon vorhanden → aktualisieren
-git pull origin main
 ```
 
-### 3. Erstkonfiguration ausführen
+### 3. Container starten
 
 ```bash
-# Setup-Skript ausführbar machen und starten
-chmod +x scripts/setup.sh
-sudo ./scripts/setup.sh
+docker compose up -d
 ```
 
-Das Skript erledigt automatisch:
-- Docker + Docker Compose Plugin installieren
-- Verzeichnisstruktur (`data/`, `config/tls/`) anlegen
-- `.env` aus `.env.example` erzeugen
-- Firewall-Ports freigeben (ufw)
-
-### 4. Umgebungsvariablen anpassen
+### 4. Admin-Passwort auslesen
 
 ```bash
-nano .env
+docker logs stalwart
 ```
 
-Wichtige Werte:
-| Variable | Beschreibung | Beispiel |
-|----------|-------------|---------|
-| `MAIL_HOSTNAME` | FQDN des Servers | `mail.example.com` |
-| `ADMIN_SECRET` | Admin-Passwort (Web UI) | starkes Passwort |
-| `SMTP_SMARTHOST` | Weiterleitungs-SMTP (optional) | leer = direkt |
-| `TIMEZONE` | Zeitzone | `Europe/Berlin` |
+Ausgabe enthält:
+```
+✅ Configuration file written to /opt/stalwart/etc/config.toml
+🔑 Your administrator account is 'admin' with password 'XXXXXXXX'.
+```
+
+### 5. Web-Interface öffnen
+
+```
+http://<SERVER-IP>:8080/login
+```
+
+Login: `admin` + Passwort aus Schritt 4.
+
+### 6. Im Web-Interface konfigurieren
+
+| Schritt | Wo | Was |
+|---------|----|-----|
+| **Hostname** | Settings → Server → Network | Server-FQDN eintragen (z.B. `mail.example.com`) |
+| **Domain** | Management → Directory → Domains | Domain hinzufügen → DNS-Records werden angezeigt |
+| **TLS** | Settings → Server → TLS → ACME Providers | Let's Encrypt aktivieren ODER eigenes Zertifikat hochladen |
+| **Storage** | Settings → Storage | Standard = RocksDB (kann so bleiben) |
+| **User** | Management → Directory → Accounts | SMTP-User anlegen |
+
+### 7. DNS-Records setzen
+
+Nach Anlegen der Domain im Web-Interface zeigt Stalwart die nötigen DNS-Records:
+- **MX** Record → auf den Server
+- **SPF** TXT Record
+- **DKIM** TXT Records (werden automatisch generiert)
+- **DMARC** TXT Record
+
+### 8. Container neustarten
+
+```bash
+docker restart stalwart
+```
 
 ---
 
 ## Docker-Befehle
 
-### Starten
-
 ```bash
-# Container im Hintergrund starten
+# Starten
 docker compose up -d
 
-# ODER: Mit eigenem Dockerfile bauen + starten
-docker compose up -d --build
-```
-
-### Logs
-
-```bash
-# Live-Logs verfolgen
+# Logs (live)
 docker compose logs -f stalwart
 
-# Letzte 100 Zeilen
-docker compose logs --tail=100 stalwart
-```
-
-### Status
-
-```bash
-# Container-Status prüfen
+# Status
 docker compose ps
 
-# Ressourcenverbrauch
-docker stats stalwart-smtp-relay
-```
-
-### Stoppen / Neustarten
-
-```bash
 # Stoppen
-docker compose stop
-
-# Stoppen + Container entfernen (Daten bleiben erhalten)
 docker compose down
 
 # Neustarten
-docker compose restart stalwart
+docker restart stalwart
+
+# Update auf neuestes Image
+docker compose pull && docker compose up -d
+
+# In Container einsteigen
+docker exec -it stalwart /bin/sh
 ```
-
-### Konfiguration neu laden
-
-```bash
-# Nach Änderungen in config/config.toml
-docker compose restart stalwart
-```
-
-### Update (neues Image)
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
----
-
-## Admin-Interface
-
-Nach dem Start erreichbar unter:
-
-```
-http://<SERVER-IP>:8080
-```
-
-Login: `admin` / Wert aus `ADMIN_SECRET` in `.env`
 
 ---
 
@@ -164,57 +128,39 @@ Login: `admin` / Wert aus `ADMIN_SECRET` in `.env`
 | `25` | SMTP | Eingehend (MTA-to-MTA) |
 | `587` | SMTP + STARTTLS | Client-Submission (mit Auth) |
 | `465` | SMTPS | Client-Submission (TLS direkt) |
-| `8080` | HTTP | Web Admin |
-
----
-
-## Verbindung testen
-
-```bash
-# SMTP Verbindung testen (vom Server aus)
-telnet localhost 25
-
-# SMTP mit AUTH testen (swaks installieren)
-swaks --to test@example.com \
-      --from relay@example.com \
-      --server localhost:587 \
-      --auth-user admin \
-      --auth-password changeme \
-      --tls
-
-# Alternativ: openssl
-openssl s_client -starttls smtp -connect localhost:587
-```
+| `443` | HTTPS | Web-Interface (TLS) |
+| `8080` | HTTP | Web-Interface (Setup) |
 
 ---
 
 ## Firewall (ufw)
 
 ```bash
-# Manuell Ports öffnen
 sudo ufw allow 25/tcp
 sudo ufw allow 587/tcp
 sudo ufw allow 465/tcp
+sudo ufw allow 443/tcp
 sudo ufw allow 8080/tcp
-sudo ufw status
 ```
 
 ---
 
-## Troubleshooting
+## Verbindung testen
 
 ```bash
-# In laufenden Container einsteigen
-docker exec -it stalwart-smtp-relay /bin/sh
+# SMTP
+telnet localhost 25
 
-# Konfiguration auf Syntax prüfen
-docker exec stalwart-smtp-relay stalwart-mail --config /opt/stalwart-mail/etc/config.toml --check
+# SMTP mit Auth (swaks)
+swaks --to test@example.com \
+      --from relay@example.com \
+      --server localhost:587 \
+      --auth-user admin \
+      --auth-password PASSWORT \
+      --tls
 
-# Queue anzeigen
-docker exec stalwart-smtp-relay stalwart-mail queue list
-
-# Einzelne Mail aus Queue entfernen
-docker exec stalwart-smtp-relay stalwart-mail queue delete <MESSAGE-ID>
+# TLS prüfen
+openssl s_client -starttls smtp -connect localhost:587
 ```
 
 ---
@@ -222,20 +168,33 @@ docker exec stalwart-smtp-relay stalwart-mail queue delete <MESSAGE-ID>
 ## GitHub Workflow (Dev → Server)
 
 ```bash
-# Lokal (Windows): Änderungen pushen
-git add .
-git commit -m "feat: Konfiguration anpassen"
-git push origin main
+# Lokal (Windows)
+git add . && git commit -m "update" && git push
 
-# Auf dem Linux-Server: Änderungen holen + neu starten
+# Auf dem Server
 git pull origin main
-docker compose restart stalwart
+docker compose down && docker compose up -d
+```
+
+---
+
+## Daten / Volumes
+
+Stalwart speichert alles im Docker Volume `stalwart-data` → `/opt/stalwart/`:
+- `etc/config.toml` – Konfiguration (über Web-UI verwaltet)
+- `data/` – Datenbank, Queue, Logs
+- `logs/` – Server-Logs
+
+Volume anzeigen:
+```bash
+docker volume inspect smtprelay_stalwart-data
 ```
 
 ---
 
 ## Links
 
-- [Stalwart Dokumentation](https://stalw.art/docs/get-started/)
+- [Stalwart Doku – Docker Install](https://stalw.art/docs/install/platform/docker/)
+- [Stalwart Doku – DNS Setup](https://stalw.art/docs/install/dns)
+- [Stalwart Doku – Security](https://stalw.art/docs/install/security)
 - [Stalwart GitHub](https://github.com/stalwartlabs/mail-server)
-- [Docker Dokumentation](https://docs.docker.com/)

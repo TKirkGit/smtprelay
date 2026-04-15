@@ -58,15 +58,10 @@ install_compose() {
 
 # ─── 3. Verzeichnisstruktur anlegen ──────────────────
 create_dirs() {
-  echo -e "${GREEN}[3/5] Verzeichnisstruktur wird angelegt...${NC}"
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-  mkdir -p "${SCRIPT_DIR}/data"
-  mkdir -p "${SCRIPT_DIR}/data/queue"
-  mkdir -p "${SCRIPT_DIR}/data/logs"
-  mkdir -p "${SCRIPT_DIR}/config/tls"
-  chmod 750 "${SCRIPT_DIR}/config"
-  echo -e "${GREEN}✔ Verzeichnisse angelegt unter: ${SCRIPT_DIR}${NC}"
+  echo -e "${GREEN}[3/5] Projektverzeichnis wird geprüft...${NC}"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  echo -e "${GREEN}✔ Projektverzeichnis: ${SCRIPT_DIR}${NC}"
+  echo -e "${YELLOW}  Stalwart speichert Daten im Docker Volume 'stalwart-data'.${NC}"
 }
 
 # ─── 4. .env aus .env.example anlegen ────────────────
