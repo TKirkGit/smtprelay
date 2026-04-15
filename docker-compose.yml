@@ -6,8 +6,12 @@ services:
     network_mode: host
     volumes:
       - stalwart-data:/opt/stalwart
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
     environment:
       - TZ=${TIMEZONE:-Europe/Berlin}
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+      - SSL_CERT_DIR=/etc/ssl/certs
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 30s
